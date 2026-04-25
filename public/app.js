@@ -81,7 +81,7 @@ function renderHeader() {
     ended: "游戏结束"
   }[data.phase];
   $("phaseTitle").textContent = phaseText;
-  $("identity").textContent = `你是玩家 ${me.index + 1}，牌库 ${me.deckCount} 张，对手手牌 ${data.opponent?.handCount ?? 0} 张`;
+  $("identity").textContent = `你是玩家 ${me.index + 1}，公共牌库 ${data.deckCount} 张，对手手牌 ${data.opponent?.handCount ?? 0} 张`;
   const waitingPlayer = data.players.length < 2 ? "等待玩家 2 加入。" : "";
   const turn = data.currentPlayer === me.index ? "轮到你行动。" : `等待玩家 ${data.currentPlayer + 1}。`;
   const reaction = data.reactionFor === me.index ? `可以反击对手的 ${data.lastAction?.label || "行动"}。` : "";
