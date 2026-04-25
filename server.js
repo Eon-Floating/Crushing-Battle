@@ -186,6 +186,24 @@ function beginCardPhase(room) {
   addLog(room, "肠碎铺满，进入抽牌与出牌阶段。");
 }
 
+function finishSetupIfPlayerEmpty(room) {
+  const counts = [countPlayerPieces(room, 0), countPlayerPieces(room, 1)];
+  const emptyPlayer = counts.findIndex((count) => count >= PIECES_PER_PLAYER);
+  if (emptyPlayer === -1) return false;
+
+  const otherPlayer = 1 - emptyPlayer;
+  const remaining = PIECES_PER_PLAYER - counts[otherPlayer];
+  for (let i = 0; i < remaining; i += 1) {
+    room.board[room.nextPlaceIndex + i].owner = otherPlayer;
+  }
+  room.nextPlaceIndex += remaining;
+  if (remaining > 0) {
+    addLog(room, `玩家 ${otherPlayer + 1} 剩余 ${remaining} 个肠碎已自动铺完。`);
+  }
+  beginCardPhase(room);
+  return true;
+}
+
 function placePieces(room, player, count) {
   if (room.phase !== "setup") throw new Error("现在不能铺肠碎。");
   assertTurn(room, player);
@@ -200,6 +218,9 @@ function placePieces(room, player, count) {
   }
   room.nextPlaceIndex += count;
   addLog(room, `玩家 ${player.index + 1} 铺了 ${count} 个肠碎。`);
+  if (finishSetupIfPlayerEmpty(room)) {
+    return;
+  }
   if (room.nextPlaceIndex >= room.board.length) {
     beginCardPhase(room);
   } else {
