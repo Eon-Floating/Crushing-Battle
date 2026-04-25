@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>肠碎大战</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section id="lobby" class="lobby">
+        <div class="brand">
+          <p class="eyebrow">双人联机桌游原型</p>
+          <h1>肠碎大战</h1>
+          <p>创建房间，把房间号发给朋友；或在另一个浏览器窗口加入同一个房间。</p>
+        </div>
+        <div class="join-panel">
+          <button id="createRoom" class="primary">创建房间</button>
+          <div class="join-row">
+            <input id="roomInput" maxlength="6" placeholder="输入房间号">
+            <button id="joinRoom">加入</button>
+          </div>
+          <p id="lobbyError" class="error"></p>
+        </div>
+      </section>
+
+      <section id="game" class="game hidden">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">房间 <span id="roomCode"></span></p>
+            <h1 id="phaseTitle">准备中</h1>
+          </div>
+          <div class="scoreboard">
+            <div><span>玩家 1</span><strong id="score0">0</strong></div>
+            <div><span>玩家 2</span><strong id="score1">0</strong></div>
+          </div>
+        </header>
+
+        <section class="table">
+          <div class="board-wrap">
+            <div id="board" class="board"></div>
+          </div>
+
+          <aside class="side">
+            <div class="status">
+              <p id="identity">你是玩家</p>
+              <p id="turnText">等待中</p>
+              <p id="constraintText"></p>
+            </div>
+
+            <div id="setupControls" class="panel">
+              <h2>铺肠碎</h2>
+              <div class="place-grid">
+                <button data-place="1">1</button>
+                <button data-place="2">2</button>
+                <button data-place="3">3</button>
+                <button data-place="4">4</button>
+                <button data-place="5">5</button>
+                <button data-place="6">6</button>
+              </div>
+            </div>
+
+            <div id="playControls" class="panel hidden">
+              <div class="hand-head">
+                <h2>手牌</h2>
+                <button id="drawCard">抽牌</button>
+              </div>
+              <div id="hand" class="hand"></div>
+              <div id="targetTools" class="target-tools hidden">
+                <p id="targetHint">选择一个已填满格子</p>
+                <div class="join-row">
+                  <button id="forceRed">指定营养</button>
+                  <button id="forceBlack">指定垃圾</button>
+                </div>
+              </div>
+              <div id="reactionTools" class="reaction hidden">
+                <button id="counterBtn">用黑J反击</button>
+                <button id="passReaction">不反击</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h2>记录</h2>
+              <ol id="log" class="log"></ol>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

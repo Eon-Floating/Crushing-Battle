@@ -1,0 +1,12 @@
+{
+  "name": "easygame-board",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A simple online two-player digital board game prototype.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
