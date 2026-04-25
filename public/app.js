@@ -11,12 +11,13 @@ const lobby = $("lobby");
 const game = $("game");
 const lobbyError = $("lobbyError");
 
-function cardName(card) {
-  return `${card.suitName}${card.rank}`;
-}
-
 function materialName(color) {
   return color === "red" ? "营养" : "垃圾";
+}
+
+function cardTypeLabel(card) {
+  if (card.kind === "material") return card.materialType === "nutrient" ? "营养" : "垃圾";
+  return "技能";
 }
 
 async function api(path, body = {}) {
@@ -150,9 +151,9 @@ function renderHand() {
   hand.innerHTML = "";
   state.data.me.hand.forEach((card) => {
     const button = document.createElement("button");
-    const kind = card.kind === "material" ? materialName(card.color) : "技能";
     button.className = `card ${card.color}${state.selectedCard === card.id ? " selected" : ""}`;
-    button.innerHTML = `<strong>${card.suitName}${card.rank}</strong><span>${kind}</span>`;
+    button.innerHTML = `<strong>${card.name}</strong><span>${cardTypeLabel(card)} · ${card.description}</span>`;
+    button.title = card.description;
     button.addEventListener("click", () => selectCard(card));
     hand.appendChild(button);
   });
@@ -161,7 +162,7 @@ function renderHand() {
 function renderReaction() {
   const canReact = state.data.reactionFor === state.data.me.index;
   $("reactionTools").classList.toggle("hidden", !canReact);
-  $("counterBtn").disabled = !state.data.me.hand.some((card) => card.color === "black" && card.rank === "J");
+  $("counterBtn").disabled = !state.data.me.hand.some((card) => card.action === "counter");
 }
 
 function renderLog() {
@@ -179,19 +180,44 @@ function selectCard(card) {
   if (data.currentPlayer !== data.me.index || data.reactionFor !== null || data.phase !== "play") return;
   state.selectedCard = card.id;
   renderHand();
-  const targetTools = $("targetTools");
-  const needsTarget = card.kind === "skill" && card.color === "red" && ["Q", "K"].includes(card.rank)
-    || card.kind === "skill" && card.color === "black" && card.rank === "K";
-  targetTools.classList.toggle("hidden", !(needsTarget || (card.color === "black" && card.rank === "Q")));
-  if (card.kind === "material" || card.rank === "J") playSelected({});
+  renderActionTools(card);
+  if (card.kind === "material" || card.action === "steal") playSelected({});
 }
 
 async function chooseCell(index) {
   if (!state.selectedCard) return;
   const card = state.data.me.hand.find((item) => item.id === state.selectedCard);
   if (!card) return;
-  if (card.kind === "skill" && ["Q", "K"].includes(card.rank)) {
+  if (["flip", "boost", "weaken"].includes(card.action)) {
     await playSelected({ target: index });
+  }
+}
+
+function renderActionTools(card) {
+  const targetTools = $("targetTools");
+  const forceRed = $("forceRed");
+  const forceBlack = $("forceBlack");
+  const needsTarget = ["flip", "boost", "weaken"].includes(card.action);
+  const needsChoice = card.action === "jam";
+  targetTools.classList.toggle("hidden", !(needsTarget || needsChoice || card.action === "counter"));
+  forceRed.classList.toggle("hidden", !needsChoice);
+  forceBlack.classList.toggle("hidden", !needsChoice);
+
+  if (card.action === "flip") {
+    $("actionTitle").textContent = "翻面";
+    $("targetHint").textContent = "选择一个已填满的肠碎，改变它的所有者。";
+  } else if (card.action === "boost") {
+    $("actionTitle").textContent = "超绝消化";
+    $("targetHint").textContent = "选择一个已填满的肠碎，使其分值变为 2 倍。";
+  } else if (card.action === "weaken") {
+    $("actionTitle").textContent = "超弱消化";
+    $("targetHint").textContent = "选择一个已填满的肠碎，使其分值变为一半。";
+  } else if (card.action === "jam") {
+    $("actionTitle").textContent = "窜";
+    $("targetHint").textContent = "指定对手下回合必须出的资源类型。";
+  } else if (card.action === "counter") {
+    $("actionTitle").textContent = "快手还击";
+    $("targetHint").textContent = "这张技能只能在对手回合结束后的反击窗口使用。";
   }
 }
 
@@ -246,7 +272,7 @@ $("forceRed").addEventListener("click", () => playSelected({ forceColor: "red" }
 $("forceBlack").addEventListener("click", () => playSelected({ forceColor: "black" }));
 
 $("counterBtn").addEventListener("click", async () => {
-  const card = state.data.me.hand.find((item) => item.color === "black" && item.rank === "J");
+  const card = state.data.me.hand.find((item) => item.action === "counter");
   if (!card) return;
   try {
     await api("/api/counter", { room: state.room, player: state.player, cardId: card.id });

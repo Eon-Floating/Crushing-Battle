@@ -7,15 +7,123 @@ const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.join(__dirname, "public");
 const rooms = new Map();
 
-const SUITS = [
-  { id: "H", name: "红桃", color: "red" },
-  { id: "D", name: "方片", color: "red" },
-  { id: "S", name: "黑桃", color: "black" },
-  { id: "C", name: "梅花", color: "black" }
-];
-const RANKS = ["A", "2", "3", "J", "Q", "K"];
-const FILL_COUNTS = { A: 1, 2: 2, 3: 3 };
 const PIECES_PER_PLAYER = 24;
+const CARD_DEFINITIONS = [
+  {
+    code: "nutrient-basic",
+    name: "初级营养",
+    description: "按蛇形路线填满 1 个尚未填满的肠碎。己方肠碎得分，对方肠碎也会得分。",
+    kind: "material",
+    materialType: "nutrient",
+    color: "red",
+    amount: 1,
+    copies: 2
+  },
+  {
+    code: "nutrient-medium",
+    name: "中级营养",
+    description: "按蛇形路线填满 2 个尚未填满的肠碎。",
+    kind: "material",
+    materialType: "nutrient",
+    color: "red",
+    amount: 2,
+    copies: 2
+  },
+  {
+    code: "nutrient-advanced",
+    name: "高级营养",
+    description: "按蛇形路线填满 3 个尚未填满的肠碎。",
+    kind: "material",
+    materialType: "nutrient",
+    color: "red",
+    amount: 3,
+    copies: 2
+  },
+  {
+    code: "trash-basic",
+    name: "初级垃圾",
+    description: "按蛇形路线填满 1 个尚未填满的肠碎。被垃圾填满的肠碎计负分。",
+    kind: "material",
+    materialType: "trash",
+    color: "black",
+    amount: 1,
+    copies: 2
+  },
+  {
+    code: "trash-medium",
+    name: "中级垃圾",
+    description: "按蛇形路线填满 2 个尚未填满的肠碎。",
+    kind: "material",
+    materialType: "trash",
+    color: "black",
+    amount: 2,
+    copies: 2
+  },
+  {
+    code: "trash-advanced",
+    name: "高级垃圾",
+    description: "按蛇形路线填满 3 个尚未填满的肠碎。",
+    kind: "material",
+    materialType: "trash",
+    color: "black",
+    amount: 3,
+    copies: 2
+  },
+  {
+    code: "steal",
+    name: "夺取",
+    description: "从对手手牌中随机抽取 1 张加入你的手牌。",
+    kind: "skill",
+    action: "steal",
+    color: "red",
+    copies: 2
+  },
+  {
+    code: "counter",
+    name: "快手还击",
+    description: "只能在对手回合结束后的反击时使用，抵消对手本回合打出的牌，并抽 1 张牌。",
+    kind: "skill",
+    action: "counter",
+    color: "black",
+    copies: 2
+  },
+  {
+    code: "flip",
+    name: "翻面",
+    description: "选择 1 个已被填满的肠碎，改变它的所有者。",
+    kind: "skill",
+    action: "flip",
+    color: "red",
+    copies: 2
+  },
+  {
+    code: "jam",
+    name: "窜",
+    description: "对手下回合不能出技能牌；你指定对手必须出营养或垃圾，若没有对应牌则不行动。",
+    kind: "skill",
+    action: "jam",
+    color: "black",
+    copies: 2
+  },
+  {
+    code: "boost",
+    name: "超绝消化",
+    description: "选择 1 个已被填满的肠碎，使其营养或垃圾的数值变为 2 倍。",
+    kind: "skill",
+    action: "boost",
+    color: "red",
+    copies: 2
+  },
+  {
+    code: "weaken",
+    name: "超弱消化",
+    description: "选择 1 个已被填满的肠碎，使其营养或垃圾的数值变为一半。",
+    kind: "skill",
+    action: "weaken",
+    color: "black",
+    copies: 2
+  }
+];
 
 function makePath() {
   const cells = [];
@@ -33,15 +141,18 @@ const BOARD_PATH = makePath();
 
 function makeDeck(owner) {
   const cards = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
+  for (const definition of CARD_DEFINITIONS) {
+    for (let copy = 0; copy < definition.copies; copy += 1) {
       cards.push({
-        id: `${owner}-${suit.id}-${rank}-${crypto.randomUUID().slice(0, 8)}`,
-        rank,
-        suit: suit.id,
-        suitName: suit.name,
-        color: suit.color,
-        kind: FILL_COUNTS[rank] ? "material" : "skill"
+        id: `${owner}-${definition.code}-${crypto.randomUUID().slice(0, 8)}`,
+        code: definition.code,
+        name: definition.name,
+        description: definition.description,
+        kind: definition.kind,
+        materialType: definition.materialType,
+        action: definition.action,
+        color: definition.color,
+        amount: definition.amount
       });
     }
   }
@@ -312,7 +423,7 @@ function playCard(room, player, body) {
   try {
     checkConstraints(player, card);
     const undo = cloneForUndo(room);
-    const label = `${card.suitName}${card.rank}`;
+    const label = card.name;
     if (card.kind === "material") {
       playMaterial(room, player, card);
     } else {
@@ -333,41 +444,41 @@ function playCard(room, player, body) {
 }
 
 function playMaterial(room, player, card) {
-  const amount = FILL_COUNTS[card.rank];
+  const amount = card.amount;
   const emptyOwned = room.board.filter((cell) => cell.owner !== null && cell.filledBy === null);
   if (emptyOwned.length === 0) throw new Error("没有可填满的肠碎。");
   for (const cell of emptyOwned.slice(0, amount)) {
-    cell.filledBy = card.color === "red" ? "nutrient" : "trash";
-    cell.value = card.color === "red" ? 1 : -1;
+    cell.filledBy = card.materialType;
+    cell.value = card.materialType === "nutrient" ? 1 : -1;
   }
 }
 
 function playSkill(room, player, card, body) {
   const opponent = room.players[1 - player.index];
-  if (card.color === "red" && card.rank === "J") {
+  if (card.action === "steal") {
     if (opponent.hand.length === 0) throw new Error("对手没有手牌可夺取。");
     const index = Math.floor(Math.random() * opponent.hand.length);
     player.hand.push(opponent.hand.splice(index, 1)[0]);
     return;
   }
-  if (card.color === "black" && card.rank === "J") {
-    throw new Error("黑J只能在对手回合后用“反击”按钮打出。");
+  if (card.action === "counter") {
+    throw new Error("快手还击只能在对手回合后用“反击”按钮打出。");
   }
-  if (card.color === "red" && card.rank === "Q") {
+  if (card.action === "flip") {
     const cell = findTargetCell(room, body.target, true);
     cell.owner = 1 - cell.owner;
     return;
   }
-  if (card.color === "black" && card.rank === "Q") {
+  if (card.action === "jam") {
     const forceColor = body.forceColor === "black" ? "black" : "red";
     opponent.constraints = { noSkill: true, forceColor };
     return;
   }
-  if (card.color === "red" && card.rank === "K") {
+  if (card.action === "boost") {
     findTargetCell(room, body.target, true).modifier *= 2;
     return;
   }
-  if (card.color === "black" && card.rank === "K") {
+  if (card.action === "weaken") {
     findTargetCell(room, body.target, true).modifier *= 0.5;
     return;
   }
@@ -378,15 +489,14 @@ function counter(room, player, cardId) {
   if (room.phase !== "play") throw new Error("现在不能反击。");
   if (room.reactionFor !== player.index) throw new Error("当前没有轮到你确认反击。");
   if (!room.lastAction || room.lastAction.actor === player.index) throw new Error("没有可反击的行动。");
-  const card = removeCard(player, cardId);
-  if (!(card.color === "black" && card.rank === "J")) {
-    player.hand.push(card);
-    throw new Error("只有黑J可以反击。");
-  }
+  const card = player.hand.find((item) => item.id === cardId);
+  if (!card) throw new Error("手牌里没有这张牌。");
+  if (card.action !== "counter") throw new Error("只有快手还击可以反击。");
   restoreUndo(room, room.lastAction.undo);
   room.currentPlayer = player.index;
+  removeCard(player, cardId);
   drawCard(room, player, true);
-  addLog(room, `玩家 ${player.index + 1} 打出黑J，抵消了 ${room.lastAction.label}，并抽一张牌。`);
+  addLog(room, `玩家 ${player.index + 1} 打出快手还击，抵消了 ${room.lastAction.label}，并抽一张牌。`);
   room.lastAction = null;
   room.reactionFor = null;
 }

@@ -281,12 +281,13 @@ input {
 }
 
 .card {
-  min-height: 72px;
+  min-height: 96px;
   padding: 8px;
   display: grid;
   align-content: center;
   gap: 4px;
   border-width: 2px;
+  text-align: left;
 }
 
 .card.red {
@@ -303,11 +304,12 @@ input {
 }
 
 .card strong {
-  font-size: 22px;
+  font-size: 17px;
 }
 
 .card span {
   font-size: 12px;
+  line-height: 1.35;
 }
 
 .target-tools,
@@ -320,6 +322,11 @@ input {
 .target-tools p {
   margin: 0 0 8px;
   color: var(--muted);
+}
+
+.target-tools h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
 }
 
 .reaction {
